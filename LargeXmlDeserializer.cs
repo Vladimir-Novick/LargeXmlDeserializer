@@ -27,7 +27,7 @@ namespace SGCombo.Utils
             Type type = typeof(T);
             String regEx = $"(<{pairName}[ ]*>.+?</{pairName}[ ]*>)";
 
-            using (Stream stream = File.Open(InputFile, FileMode.Open))
+            using (Stream stream = File.Open(InputFile, FileMode.Open,FileAccess.Read))
             {
                 using (StreamReader sr = new StreamReader(stream))
                 {
