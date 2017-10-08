@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Serialization;
@@ -23,24 +25,20 @@ namespace MemoryDB.StaticData.Utils
      * 
      *  Example :
      *  
-   
-     Multu-Part, Multi-Class deserialization:
-     
-            var listObjetct = new List<XMLDataObject>(); // Create Objects Containers 
+     *       var listObjetct = new List<XMLDataObject>();
 
-            var package = new XMLDataObjectItem<Package>("Package"); // Create Store item. Section Package , Class Package
-            listObjetct.Add(package);  // add element to conteiner
+            var package = new XMLDataObjectItem<Package>("Package");
+            listObjetct.Add(package);
 
-            var itineraryDetail = new XMLDataObjectItem<ItineraryDetail>("ItineraryDetail"); // Create additional item
+            var itineraryDetail = new XMLDataObjectItem<ItineraryDetail>("ItineraryDetail");
             listObjetct.Add(itineraryDetail);
 
-             // using custom regular expression:
-			 // Create store item with specific regular expression
+             // using custom regex expression:
              
              var bc = new XMLDataObjectItem<BClient>("BClient","(?<data><(?<pair>BClient)[ ]*>.+?</BClient[ ]*></BClient[ ]*>)");
              listObjetct.Add(bc);
 
-             XMLDesetializerContainer.Deserialize(listObjetct, fileName);  // Parse  
+            XMLDesetializerContainer.Deserialize(listObjetct, fileName);
      * 
      * 
      */
@@ -48,12 +46,11 @@ namespace MemoryDB.StaticData.Utils
     public interface XMLDataObject
     {
         string GetPeirName();
-        
-        void Add(String pearValue);
+        void Add(object o);
+
+        Object CreateObject(String pearValue);
 
         string GetRegExExpression();
-        
-        Object GetDataObject();
 
     }
 
@@ -77,30 +74,29 @@ namespace MemoryDB.StaticData.Utils
         private String customRegEx = null;
 
         public List<T> DataObject = new List<T>();
-        
-        public Object GetDataObject(){
-           return DataObject;
-        }
-        
-        
         private String PairName { get; set; }
         private XmlSerializer ser = new XmlSerializer(typeof(T));
 
-        public void Add(String peirValue)
+
+        public Object CreateObject(String peirValue)
         {
             using (StringReader sr2 = new StringReader(peirValue))
             {
                 try
                 {
                     T o = (T)ser.Deserialize(sr2);
-                    DataObject.Add(o);
+                    return o;
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Error deserialization: {ex.Message} -> {peirValue}");
                 }
             }
+            return null;
         }
+
+
+
 
         public string GetPeirName()
         {
@@ -116,11 +112,18 @@ namespace MemoryDB.StaticData.Utils
             }
             return customRegEx;
         }
+
+        public void Add(Object o)
+        {
+            T p = (T)o;
+            DataObject.Add(p);
+        }
     }
 
     public class XMLDesetializerContainer
     {
-        public static void Deserialize(List<XMLDataObject> dataObjects, string InputFile)
+-
+        public static void Deserialize(List<XMLDataObject> dataObjects, string InputFile, object dataList = null )
         {
 
             StringBuilder regExBuilder = new StringBuilder();
@@ -179,7 +182,15 @@ namespace MemoryDB.StaticData.Utils
                                 XMLDataObject outData = null;
                                 outputData.TryGetValue(key, out outData);
 
-                                outData.Add(strValue);
+                                Object obj =  outData.CreateObject(strValue);
+                                if (dataList == null)
+                                {
+                                    outData.Add(obj);
+                                }
+                                else
+                                {
+                                    AddDataObjectTodataList(obj, dataList);
+                                }
 
                                 var lastElement = matchCollection[matchCollection.Count - 1];
                                 int istartD = lastElement.Index + lastElement.Length - 1;
@@ -196,6 +207,44 @@ namespace MemoryDB.StaticData.Utils
 
                 }
             }
+        }
+
+        private static Regex rcheck = new Regex(@"\[([^]]*)\]");
+
+        private  static void AddDataObjectTodataList(object dataObject, object dataList)
+        {
+            if (dataObject == null) return;
+            if (dataList == null) return;
+
+            Type dataObjectType = dataObject.GetType();
+            String strdataObjectType = dataObjectType.ToString();
+
+            Type type = dataList.GetType();
+           
+            FieldInfo[] fields = type.GetFields();
+
+            for (int i = 0; i < fields.Length; i++)
+            {
+                FieldInfo field = fields[i];
+
+                Object value = fields[i].GetValue(dataList);
+
+                FieldAttributes att = field.Attributes;
+                String tstrType = field.FieldType.ToString();
+                Match match = rcheck.Match(tstrType);
+                if (match.Groups.Count == 2)
+                {
+                    String dataType = match.Groups[1].ToString();
+                    if (dataType == strdataObjectType)
+                    {
+                        Type tobj = field.FieldType;
+                        IList objList = (IList)value;
+                        objList.Add(dataObject);
+
+                    }
+                }
+            }
+
         }
     }
 }
