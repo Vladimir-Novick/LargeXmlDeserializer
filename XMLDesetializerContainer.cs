@@ -151,18 +151,16 @@ namespace MemoryDB.StaticData.Utils
 
             using (Stream stream = File.Open(InputFile, FileMode.Open, FileAccess.Read))
             {
-                using (StreamReader sr = new StreamReader(stream))
+                using (StreamReader sr = new StreamReader(stream, System.Text.Encoding.UTF8, true))
                 {
                     StringBuilder bilder = new StringBuilder();
 
-                    Regex expression = new Regex(regExpression);
+                    Regex expression = new Regex(regExpression, RegexOptions.CultureInvariant & RegexOptions.Singleline & RegexOptions.Multiline & RegexOptions.IgnoreCase);
 
-                    char[] c = null;
-                    while (sr.Peek() >= 0)
+                     string lineR;
+                     while ((lineR = sr.ReadLine()) != null)
                     {
-                        c = new char[4028];
-                        int count = sr.ReadBlock(c, 0, c.Length);
-                        string charToString = new string(c, 0, count);
+						string charToString = lineR + " ";
 
                         bilder.Append(charToString);
                         String line = bilder.ToString();

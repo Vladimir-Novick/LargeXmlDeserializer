@@ -33,14 +33,12 @@ namespace SGCombo.Utils
                 {
                     StringBuilder bilder = new StringBuilder();
 
-                    Regex expression = new Regex(regEx);
+                    Regex expression = new Regex(regEx, RegexOptions.CultureInvariant & RegexOptions.Singleline & RegexOptions.Multiline & RegexOptions.IgnoreCase);
 
-                    char[] c = null;
-                    while (sr.Peek() >= 0)
+                    string lineR;
+                    while ((lineR = sr.ReadLine()) != null)
                     {
-                        c = new char[4028];
-                        int count = sr.ReadBlock(c, 0, c.Length);
-                        string charToString = new string(c, 0, count);
+						string charToString = lineR + " ";
 
                         bilder.Append(charToString);
                         String line = bilder.ToString();
